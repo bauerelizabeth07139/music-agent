@@ -1,0 +1,45 @@
+{
+  "id": "com.local.music-search",
+  "name": "音乐参考资料搜索 Skill",
+  "version": "1.2.0",
+  "type": "web.search",
+  "entry": "skill.py",
+  "runtime": {
+    "engine": "python",
+    "python": ">=3.9",
+    "dependencies": ["httpx"]
+  },
+  "install": {
+    "kind": "local",
+    "path": "."
+  },
+  "inputs": {
+    "query": "string",
+    "genre": "string?",
+    "description": "string?",
+    "key": "string?",
+    "allow_local_fallback": "boolean?"
+  },
+  "outputs": {
+    "query": "string",
+    "results": "array",
+    "count": "integer",
+    "source": "string"
+  },
+  "license": "MIT",
+  "capabilities": {
+    "search": [
+      "music_references",
+      "style_examples",
+      "chord_progressions",
+      "offline_fallback"
+    ],
+    "offline": true,
+    "portable": true
+  },
+  "metadata": {
+    "description": "在编曲前/中检索音乐风格、和弦进行、相似歌曲参考资料；网络不可用时会使用本地参考模板兜底，避免流程中断。",
+    "author": "local-demo",
+    "tags": ["music", "search", "reference", "web", "fallback"]
+  }
+}

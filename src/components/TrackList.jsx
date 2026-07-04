@@ -1,0 +1,133 @@
+﻿import { useRef, useEffect, useState } from 'react';
+
+const INSTRUMENT_EMOJI = {
+  piano: '🎹', guitar: '🎸', bass: '🎸', drums: '🥁',
+  violin: '🎻', cello: '🎻', flute: '🪈', trumpet: '🎺',
+  synth_pad: '🌊', synth_lead: '🎹', hulusi: '🎵',
+};
+
+const COLORS = {
+  piano: '#58a6ff', guitar: '#d29922', bass: '#3fb950', drums: '#f85149',
+  violin: '#bc8cff', cello: '#f778ba', flute: '#39d2c0', trumpet: '#e8833a',
+  synth_pad: '#58a6ff', synth_lead: '#bc8cff', hulusi: '#6e40aa',
+};
+
+function TrackItem({ track, selected, onSelect, onVolumeChange }) {
+  const canvasRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef(null);
+  const isVocal = track.role === 'vocal';
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height = canvas.offsetHeight;
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, w, h);
+    const color = isVocal ? '#f778ba' : (COLORS[track.instrument] || '#58a6ff');
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const bars = 80;
+    for (let i = 0; i < bars; i++) {
+      const x = (i / bars) * w;
+      const seed = (track.id.charCodeAt(track.id.length - 1) || 0) + i;
+      const amp = (Math.sin(seed * 0.7) * 0.3 + Math.sin(seed * 1.3) * 0.2 + Math.random() * 0.15 + 0.35) * (track.volume || 0.8);
+      ctx.moveTo(x, h / 2 - amp * (h / 2 - 2));
+      ctx.lineTo(x, h / 2 + amp * (h / 2 - 2));
+    }
+    ctx.stroke();
+  }, [track, isVocal]);
+
+  const togglePlay = (e) => {
+    e.stopPropagation();
+    if (!track.audio_url) return;
+    if (playing && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setPlaying(false);
+    } else {
+      const a = new Audio(track.audio_url);
+      a.volume = track.volume || 0.8;
+      a.onended = () => setPlaying(false);
+      a.play();
+      audioRef.current = a;
+      setPlaying(true);
+    }
+  };
+
+  const emoji = isVocal ? '🎤' : (INSTRUMENT_EMOJI[track.instrument] || '🎵');
+
+  return (
+    <div className={`track-item ${selected ? 'selected' : ''}`} onClick={() => onSelect(track.id)}>
+      <div className="track-header">
+        <div
+          className={`track-icon ${isVocal ? '' : 'instrument-' + track.instrument}`}
+          style={isVocal ? { background: 'linear-gradient(135deg, #880e4f, #ad1457)' } : {}}
+        >
+          {emoji}
+        </div>
+        <div className="track-info">
+          <h4>
+            {track.name}
+            {isVocal && <span style={{ fontSize: 11, color: '#f778ba', fontWeight: 400 }}> 人声</span>}
+          </h4>
+          <div className="track-meta">
+            <span>{isVocal ? (track.voice || 'vocal') : (track.instrument || 'piano')}</span>
+            <span>CH {track.channel}</span>
+            <span>{track.part || 'melody'}</span>
+            {track.note_count != null && <span>{track.note_count} 音符</span>}
+          </div>
+        </div>
+        <div className="track-controls">
+          <button className={playing ? 'playing' : ''} onClick={togglePlay}>
+            {playing ? '⏸' : '▶'}
+          </button>
+          <input
+            type="range"
+            className="volume-slider"
+            min="0"
+            max="1"
+            step="0.05"
+            value={track.volume || 0.8}
+            onChange={e => onVolumeChange(track.id, parseFloat(e.target.value))}
+            onClick={e => e.stopPropagation()}
+          />
+          {track.audio_url && (
+            <a
+              href={track.audio_url}
+              download={`${track.id}_${track.name}.wav`}
+              className="btn btn-small"
+              style={{ textDecoration: 'none', fontSize: 11, padding: '2px 8px', marginLeft: 4 }}
+              onClick={e => e.stopPropagation()}
+              title={`下载 ${track.name}`}
+            >
+              💾
+            </a>
+          )}
+        </div>
+      </div>
+      <div className="track-waveform">
+        <canvas ref={canvasRef} className="waveform-canvas" />
+      </div>
+    </div>
+  );
+}
+
+export default function TrackList({ tracks, selectedTrack, onSelect, onVolumeChange }) {
+  return (
+    <div className="track-list">
+      {tracks.map(track => (
+        <TrackItem
+          key={track.id}
+          track={track}
+          selected={selectedTrack === track.id}
+          onSelect={onSelect}
+          onVolumeChange={onVolumeChange}
+        />
+      ))}
+    </div>
+  );
+}

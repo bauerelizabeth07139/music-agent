@@ -1,0 +1,40 @@
+﻿{
+  "id": "com.local.instrument-synth",
+  "name": "乐器音轨合成 Skill",
+  "version": "2.1.0",
+  "type": "audio.render",
+  "entry": "skill.py",
+  "runtime": {
+    "engine": "python",
+    "python": ">=3.9",
+    "dependencies": ["numpy", "soundfile"]
+  },
+  "install": { "kind": "local", "path": "." },
+  "inputs":  { "arrangement": "object", "output_dir": "string" },
+  "outputs": { "track_paths": "map<string,string>", "master_path": "string?" },
+  "license": "MIT",
+  "capabilities": {
+    "instruments": ["piano","guitar","bass","drums","violin","cello","flute","trumpet","synth_pad","synth_lead","hulusi"],
+    "synthesis": {
+      "violin":    "waveguide: sawtooth excitation + 1-pole lowpass feedback delay line + body comb filter + vibrato + bow noise",
+      "cello":     "waveguide: same as violin, darker damping, slower vibrato, stronger body resonance",
+      "guitar":    "Karplus-Strong: noise burst + delay-line feedback + body comb resonance",
+      "piano":     "additive harmonics + fast exponential decay",
+      "drums":     "frequency sweep + noise burst (kick/snare/hat/crash/clap)",
+      "flute":     "sine + breath noise + vibrato",
+      "trumpet":   "bright harmonics + brass attack envelope",
+      "bass":      "sub-harmonics + low fundamental",
+      "synth_pad": "detuned sines",
+      "synth_lead": "PWM + harmonics",
+      "hulusi":    "reed pipe + breath + vibrato + swell"
+    },
+    "rendering": ["per_track", "master_mix"],
+    "offline": true,
+    "portable": true
+  },
+  "metadata": {
+    "description": "所有弦乐器统一使用轻量物理建模：小提琴/大提琴用波导延迟线（sawtooth excitation + 1-pole 低通反馈），吉他用 Karplus-Strong。离线渲染、跨设备可迁移。",
+    "author": "local-demo",
+    "tags": ["music","render","instruments","waveguide","karplus-strong","physical-modeling"]
+  }
+}
