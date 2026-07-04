@@ -62,6 +62,38 @@ npm run dev
 
 http://localhost:5173
 
+
+## 🪟 独立窗口模式（单独打开窗口）
+
+本项目支持**独立窗口运行**，适合在演示或沉浸式创作时单独使用，而不是只停留在浏览器普通标签页里。
+
+你可以通过以下方式单独打开窗口：
+
+- 使用项目内置启动脚本（推荐）  
+  - start.ps1  
+  - launch.bat  
+  - launch.py  
+  - launch_window.py
+
+例如在 Windows 上可执行：
+
+`powershell
+powershell -ExecutionPolicy Bypass -File start.ps1
+`
+
+或：
+
+`cmd
+launch.bat
+`
+
+启动后应用会以独立窗口形态呈现，便于：
+- 与桌面其他创作软件并排使用  
+- 更像“独立音乐工具”而非普通网页  
+- 演示时更聚焦，切换更顺手  
+
+> 如果你希望“像桌面应用一样单独打开窗口”，优先使用上述启动脚本方式。
+
 ---
 
 ## ⚙️ 配置说明
@@ -99,3 +131,4 @@ http://localhost:5173
 ## 📝 License
 
 当前未显式声明许可证。如需开源协作，可补充 MIT 或其他许可证。
+
