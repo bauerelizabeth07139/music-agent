@@ -63,7 +63,7 @@ export default function VoicePanel({ voiceMode, setVoiceMode, onSynth, onClone, 
       </div>
 
       <div className="voice-input-area">
-        <label style={{ fontSize: 13, color: var(--text-muted) }}>
+        <label style={{ fontSize: 13, color: 'var(--text-muted)' }}>
           {voiceMode === 'clone' ? '输入歌词' : '输入文本'}
         </label>
         <textarea
@@ -100,7 +100,7 @@ export default function VoicePanel({ voiceMode, setVoiceMode, onSynth, onClone, 
         </>
       ) : (
         <>
-          <p style={{ fontSize: 12, color: var(--text-muted), margin: 0 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
             上传声音样本，MiMo 克隆该声线并演唱歌词
           </p>
           <div
@@ -114,7 +114,7 @@ export default function VoicePanel({ voiceMode, setVoiceMode, onSynth, onClone, 
             {file ? (
               <div className="file-info" style={{ marginTop: 12, display: 'inline-flex' }}>
                 <span className="name">{file.name}</span>
-                <span style={{ color: var(--text-muted), fontSize: 11 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                   ({(file.size / 1024).toFixed(1)} KB)
                 </span>
                 <button className="btn btn-small btn-danger"
@@ -140,7 +140,7 @@ export default function VoicePanel({ voiceMode, setVoiceMode, onSynth, onClone, 
 
       {audioUrl && (
         <div style={{ marginTop: 'auto' }}>
-          <h4 style={{ margin: '0 0 12px', fontSize: 13, color: var(--text-muted), textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <h4 style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
             输出结果
           </h4>
           <div className="audio-player">

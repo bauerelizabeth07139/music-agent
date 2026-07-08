@@ -40,7 +40,7 @@ export default function MasterPlayer({ masterUrl, multitrackUrl, arrangement, tr
     <div className="master-section">
       <h4>🎧 混音总线（Master Mix）</h4>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 12, color: var(--text-muted) }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
           {trackCount} 条音轨（{vocalCount} 人声 · {instCount} 乐器）
         </span>
       </div>
@@ -73,7 +73,7 @@ export default function MasterPlayer({ masterUrl, multitrackUrl, arrangement, tr
           📦 下载全部分轨 ({trackCount} 个文件)
         </button>
       </div>
-      <p style={{ fontSize: 11, color: var(--text-muted), marginTop: 8, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
         • <b>混音文件</b>：所有音轨叠加为一个立体声 WAV<br/>
         • <b>多轨文件</b>：每条音轨占一个独立声道（可导入 DAW 分轨编辑）<br/>
         • <b>分轨文件</b>：每条音轨单独下载为独立 WAV
