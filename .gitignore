@@ -25,3 +25,8 @@ dist-ssr
 
 # Environment variables
 .env
+
+__pycache__/
+*.pyc
+server/audio_out/
+server/audio_out/
