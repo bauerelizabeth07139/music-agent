@@ -66,10 +66,10 @@ export default function ConfigPanel({ showToast, hasKey, setHasKey }) {
     <>
       <div className="sidebar-section">
         <h3>🔑 API 配置（统一密钥）</h3>
-        <p style={{ fontSize: 11, color: '#8b949e', margin: '0 0 12px', lineHeight: 1.5 }}>
-          一个 API Key 同时用于 <span style={{ color: '#58a6ff' }}>编曲规划（LLM）</span> 和{' '}
+        <p style={{ fontSize: 11, color: var(--text-muted), margin: '0 0 12px', lineHeight: 1.5 }}>
+          一个 API Key 同时用于 <span style={{ color: var(--info) }}>编曲规划（LLM）</span> 和{' '}
           <span style={{ color: '#f778ba' }}>人声合成（TTS）</span>，以及{' '}
-          <span style={{ color: '#3fb950' }}>声音克隆</span>。
+          <span style={{ color: var(--success) }}>声音克隆</span>。
         </p>
         <div className="config-field">
           <label>预置方案</label>
@@ -97,7 +97,7 @@ export default function ConfigPanel({ showToast, hasKey, setHasKey }) {
               style={{ minWidth: 36 }}>{showKey ? '隐藏' : '显示'}</button>
           </div>
           {saved && apiKey && (
-            <div style={{ fontSize: 11, color: '#3fb950', marginTop: 4 }}>✓ 已保存</div>
+            <div style={{ fontSize: 11, color: var(--success), marginTop: 4 }}>✓ 已保存</div>
           )}
         </div>
         <div className="config-field">
@@ -133,36 +133,37 @@ export default function ConfigPanel({ showToast, hasKey, setHasKey }) {
         <h3>便携插件</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
           {skills.map(s => (
-            <div key={s.id} style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: 6, padding: '8px 10px' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#e6edf3' }}>{s.name}</div>
-              <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>{s.type} · v{s.version}</div>
+            <div key={s.id} style={{ background: var(--bg-input), border: '1px solid #30363d', borderRadius: 6, padding: '8px 10px' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: var(--text-primary) }}>{s.name}</div>
+              <div style={{ fontSize: 11, color: var(--text-muted), marginTop: 2 }}>{s.type} · v{s.version}</div>
               {s.metadata?.description && (
-                <div style={{ fontSize: 11, color: '#6e7681', marginTop: 4 }}>{s.metadata.description}</div>
+                <div style={{ fontSize: 11, color: var(--text-muted), marginTop: 4 }}>{s.metadata.description}</div>
               )}
-              <div style={{ fontSize: 11, color: '#58a6ff', marginTop: 6 }}>
+              <div style={{ fontSize: 11, color: var(--info), marginTop: 6 }}>
                 {s.runtime?.engine || ''}
                 {s.runtime?.python ? ` ${s.runtime.python}` : ''}
                 {s.license ? ` · ${s.license}` : ''}
               </div>
             </div>
           ))}
-          {!skills.length && <span style={{ fontSize: 12, color: '#8b949e' }}>未发现插件</span>}
+          {!skills.length && <span style={{ fontSize: 12, color: var(--text-muted) }}>未发现插件</span>}
         </div>
       </div>
 
       <div className="sidebar-section">
         <h3>关于</h3>
-        <div style={{ fontSize: 12, color: '#8b949e', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: var(--text-muted), lineHeight: 1.5 }}>
           <p>基于小米 MiMo 大模型的 AI 编曲工作站</p>
-          <p>平台：<a href="https://platform.xiaomimimo.com" target="_blank" rel="noreferrer" style={{ color: '#58a6ff' }}>platform.xiaomimimo.com</a></p>
-          <p>文档：<a href="https://mimo.mi.com/docs" target="_blank" rel="noreferrer" style={{ color: '#58a6ff' }}>mimo.mi.com/docs</a></p>
-          <p style={{ fontSize: 11, color: '#6e7681' }}>
-            Token Plan: 国内 <code style={{ color: '#58a6ff', fontSize: 10 }}>token-plan-cn.xiaomimimo.com</code><br/>
-            新加坡 <code style={{ color: '#58a6ff', fontSize: 10 }}>token-plan-sg.xiaomimimo.com</code>
+          <p>平台：<a href="https://platform.xiaomimimo.com" target="_blank" rel="noreferrer" style={{ color: var(--info) }}>platform.xiaomimimo.com</a></p>
+          <p>文档：<a href="https://mimo.mi.com/docs" target="_blank" rel="noreferrer" style={{ color: var(--info) }}>mimo.mi.com/docs</a></p>
+          <p style={{ fontSize: 11, color: var(--text-muted) }}>
+            Token Plan: 国内 <code style={{ color: var(--info), fontSize: 10 }}>token-plan-cn.xiaomimimo.com</code><br/>
+            新加坡 <code style={{ color: var(--info), fontSize: 10 }}>token-plan-sg.xiaomimimo.com</code>
           </p>
         </div>
       </div>
     </>
   );
 }
+
 

@@ -12,6 +12,10 @@ const COLORS = {
   synth_pad: '#58a6ff', synth_lead: '#bc8cff', hulusi: '#6e40aa',
 };
 
+function getCSSVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function TrackItem({ track, selected, onSelect, onVolumeChange }) {
   const canvasRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -24,9 +28,11 @@ function TrackItem({ track, selected, onSelect, onVolumeChange }) {
     const ctx = canvas.getContext('2d');
     const w = canvas.width = canvas.offsetWidth;
     const h = canvas.height = canvas.offsetHeight;
-    ctx.fillStyle = '#0d1117';
+    const bgColor = getCSSVar('--bg-input') || '#0d1117';
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, w, h);
-    const color = isVocal ? '#f778ba' : (COLORS[track.instrument] || '#58a6ff');
+    const pinkColor = getCSSVar('--pink') || '#f778ba';
+    const color = isVocal ? pinkColor : (COLORS[track.instrument] || '#58a6ff');
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -72,7 +78,7 @@ function TrackItem({ track, selected, onSelect, onVolumeChange }) {
         <div className="track-info">
           <h4>
             {track.name}
-            {isVocal && <span style={{ fontSize: 11, color: '#f778ba', fontWeight: 400 }}> 人声</span>}
+            {isVocal && <span style={{ fontSize: 11, color: 'var(--pink)', fontWeight: 400 }}> 人声</span>}
           </h4>
           <div className="track-meta">
             <span>{isVocal ? (track.voice || 'vocal') : (track.instrument || 'piano')}</span>

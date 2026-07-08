@@ -13,11 +13,11 @@ const DEFAULT_TRACKS = [
 ];
 
 function App() {
+  const [theme, setTheme] = useState(() => (localStorage.getItem('music-agent-theme') || 'dark'));
   const [mode, setMode] = useState('arrange');
   const [status, setStatus] = useState('就绪');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
-  // Flow: input -> lyrics-voice (pick voice) -> generating-vocal -> plan-confirm -> notes-confirm -> generating -> done
   const [step, setStep] = useState('input');
   const [jobId, setJobId] = useState(null);
   const [lyricsData, setLyricsData] = useState(null);
@@ -33,6 +33,11 @@ function App() {
   const [references, setReferences] = useState(null);
   const [notesArrangement, setNotesArrangement] = useState(null);
   const [hasKey, setHasKey] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('music-agent-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     fetch(API + '/api/config').then(r => r.json()).then(d => {
@@ -67,7 +72,6 @@ function App() {
     setTracks(prev => prev.map(t => {
       if (t.id !== tid) return t;
       const updated = { ...t, [field]: val };
-      // Auto-switch voice when role changes
       if (field === 'role') {
         if (val === 'vocal' && !updated.voice) updated.voice = '冰糖';
         if (val === 'instrument') updated.voice = '';
@@ -76,7 +80,6 @@ function App() {
     }));
   };
 
-  // Step 1: Generate lyrics
   const handleGenerateLyrics = useCallback(async (prompt, styleVal) => {
     setLoading(true);
     setStyle(styleVal || '');
@@ -104,7 +107,6 @@ function App() {
     }
   }, [showToast]);
 
-  // Step 2: Confirm lyrics + voice -> generate vocal TTS
   const handleConfirmLyrics = useCallback(async () => {
     if (!confirmedLyrics.trim()) {
       showToast('歌词不能为空', 'error');
@@ -124,77 +126,68 @@ function App() {
       });
       if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
       const d = await r.json();
-      showToast(`人声生成完成（${d.vocal.duration_sec.toFixed(1)}秒）`, 'success');
-      setStatus('人声完成，正在设计编曲...');
-      // Now auto-generate plan based on vocal duration
-      const rp = await fetch(API + '/api/plan', {
+      showToast(`人声生成完成（${d.vocal_segments || 0} 段）`, 'success');
+      setStatus('人声生成完成，正在生成编曲规划...');
+      const r2 = await fetch(API + '/api/arrange', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          job_id: jobId,
-          lyrics: confirmedLyrics,
-          style,
-          tracks,
-          bpm: undefined,
-          time_signature: undefined,
-          key: undefined
-        })
+        body: JSON.stringify({ job_id: jobId })
       });
-      if (!rp.ok) { const e = await rp.json(); throw new Error(e.detail); }
-      const pd = await rp.json();
-      setArrangement(pd.arrangement);
-      setReferences(pd.references || references);
+      if (!r2.ok) { const e = await r2.json(); throw new Error(e.detail); }
+      const d2 = await r2.json();
+      setArrangement(d2.arrangement);
       setStep('plan-confirm');
-      setStatus('编曲规划完成');
-      showToast('规划完成', 'success');
+      setStatus('编曲规划已生成，请确认');
+      showToast('编曲规划已生成', 'success');
     } catch (e) {
       setStatus('出错: ' + e.message);
       showToast(e.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [jobId, confirmedLyrics, style, tracks, references, showToast]);
+  }, [confirmedLyrics, jobId, tracks, showToast]);
 
-  // Step 3: Confirm plan -> generate notes
   const handleConfirmPlan = useCallback(async () => {
     setLoading(true);
-    setStatus('生成音符中...');
+    setStatus('正在生成音符...');
     try {
-      const n = await fetch(API + '/api/notes', {
+      const r = await fetch(API + '/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: jobId, lyrics: confirmedLyrics, style })
+        body: JSON.stringify({ job_id: jobId })
       });
-      if (!n.ok) { const e = await n.json(); throw new Error(e.detail); }
-      const nd = await n.json();
-      setNotesArrangement(nd.arrangement);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+      const d = await r.json();
+      setNotesArrangement(d.arrangement);
       setStep('notes-confirm');
-      setStatus('音符生成完成');
-      showToast('音符生成完成', 'success');
+      setStatus('音符已生成，请确认');
+      showToast('音符已生成', 'success');
     } catch (e) {
       setStatus('出错: ' + e.message);
       showToast(e.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [jobId, confirmedLyrics, style, showToast]);
+  }, [jobId, showToast]);
 
-  // Step 4: Confirm notes -> render
   const handleConfirmNotes = useCallback(async () => {
     setLoading(true);
     setStep('generating');
-    setStatus('渲染乐器轨道 + 混音...');
+    setStatus('正在渲染音频...');
     try {
-      const rr = await fetch(API + '/api/render/' + jobId, { method: 'POST' });
-      if (!rr.ok) { const e = await rr.json(); throw new Error(e.detail); }
-      const rd = await rr.json();
-      setRenderedTracks(rd.tracks);
-      setMasterUrl(rd.master_url);
-      setMultitrackUrl(rd.multitrack_url || null);
-      setArrangement(rd.arrangement);
+      const r = await fetch(API + '/api/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: jobId })
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+      const d = await r.json();
+      setRenderedTracks(d.tracks || []);
+      setMasterUrl(d.master_url || null);
+      setMultitrackUrl(d.multitrack_url || null);
       setStep('done');
-      setStatus('完成');
-      showToast('编曲完成，共 ' + rd.tracks.length + ' 条音轨', 'success');
+      setStatus('渲染完成');
+      showToast('渲染完成！', 'success');
     } catch (e) {
       setStatus('出错: ' + e.message);
       showToast(e.message, 'error');
@@ -204,19 +197,22 @@ function App() {
     }
   }, [jobId, showToast]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setStep('input');
     setJobId(null);
     setLyricsData(null);
     setConfirmedLyrics('');
+    setStyle('');
     setArrangement(null);
-    setNotesArrangement(null);
+    setTracks(DEFAULT_TRACKS);
     setRenderedTracks([]);
     setMasterUrl(null);
     setMultitrackUrl(null);
+    setSelectedTrack(null);
     setReferences(null);
+    setNotesArrangement(null);
     setStatus('就绪');
-  };
+  }, []);
 
   const handleSynth = useCallback(async (text, voice, synthStyle) => {
     setLoading(true);
@@ -276,13 +272,16 @@ function App() {
             <button className={'mode-tab ' + (mode === 'arrange' ? 'active' : '')} onClick={() => setMode('arrange')}>编曲模式</button>
             <button className={'mode-tab ' + (mode === 'voice' ? 'active' : '')} onClick={() => setMode('voice')}>语音模式</button>
           </div>
+          <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title={theme === 'dark' ? '切换到日间模式' : '切换到夜间模式'}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
       </header>
       {!hasKey && (
-        <div style={{ background: '#f8514930', border: '1px solid #f85149', borderRadius: 8, padding: '10px 16px', margin: '0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: 'var(--error-bg)', border: '1px solid var(--error)', borderRadius: 'var(--radius)', padding: '10px 16px', margin: '0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
-          <span style={{ color: '#f85149', fontSize: 13, fontWeight: 600 }}>未配置 API Key</span>
-          <span style={{ color: '#8b949e', fontSize: 12 }}>请在左侧面板填入小米 MiMo API Key 后点击「保存配置」，否则无法生成歌词、编曲和人声。</span>
+          <span style={{ color: 'var(--error)', fontSize: 13, fontWeight: 600 }}>未配置 API Key</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>请在左侧面板填入小米 MiMo API Key 后点击「保存配置」，否则无法生成歌词、编曲和人声。</span>
         </div>
       )}
       <div className="main-layout">
@@ -307,7 +306,6 @@ function App() {
                 onGenerateLyrics={handleGenerateLyrics}
                 onConfirmLyrics={handleConfirmLyrics}
                 onConfirmPlan={handleConfirmPlan}
-                // removed: vocal-confirm merged into lyrics-confirm
                 onConfirmNotes={handleConfirmNotes}
                 onReset={handleReset}
                 onAddTrack={addTrack}
@@ -345,9 +343,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
