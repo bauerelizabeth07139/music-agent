@@ -1,7 +1,9 @@
-﻿import { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { saveAudioWithDialog, saveAllTracksWithDialog } from '../saveAudio';
 
-export default function MasterPlayer({ masterUrl, multitrackUrl, arrangement, tracks }) {
+export default function MasterPlayer({ masterUrl, multitrackUrl, arrangement, tracks, jobId }) {
   const [playing, setPlaying] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
   const audioRef = useRef(null);
 
   const togglePlay = () => {
@@ -19,17 +21,46 @@ export default function MasterPlayer({ masterUrl, multitrackUrl, arrangement, tr
     }
   };
 
-  const downloadAllTracks = () => {
-    if (!tracks || tracks.length === 0) return;
-    tracks.forEach((t, i) => {
-      if (!t.audio_url) return;
-      const a = document.createElement('a');
-      a.href = t.audio_url;
-      a.download = `${t.id}_${t.name}.wav`;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      setTimeout(() => { a.click(); document.body.removeChild(a); }, i * 300);
-    });
+  const showMsg = (msg) => {
+    setSaveMsg(msg);
+    setTimeout(() => setSaveMsg(''), 4000);
+  };
+
+  const handleSaveMaster = async () => {
+    if (!jobId || !masterUrl) return;
+    const filename = masterUrl.split('/').pop();
+    const result = await saveAudioWithDialog(jobId, filename, 'master_mix.wav');
+    if (result.cancelled) return;
+    if (result.success) {
+      showMsg(result.path === 'browser-download' ? '已开始下载' : `已保存到: ${result.path}`);
+    } else {
+      showMsg(`保存失败: ${result.error}`);
+    }
+  };
+
+  const handleSaveMultitrack = async () => {
+    if (!jobId || !multitrackUrl) return;
+    const filename = multitrackUrl.split('/').pop();
+    const result = await saveAudioWithDialog(jobId, filename, 'multitrack.wav');
+    if (result.cancelled) return;
+    if (result.success) {
+      showMsg(result.path === 'browser-download' ? '已开始下载' : `已保存到: ${result.path}`);
+    } else {
+      showMsg(`保存失败: ${result.error}`);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    if (!jobId || !tracks) return;
+    const result = await saveAllTracksWithDialog(jobId, tracks);
+    if (result.cancelled) return;
+    if (result.success) {
+      showMsg(result.path === 'browser-download'
+        ? `已开始下载 ${result.count} 个文件`
+        : `已保存 ${result.count} 个文件到: ${result.path}`);
+    } else {
+      showMsg(`保存失败: ${result.error}`);
+    }
   };
 
   const trackCount = tracks ? tracks.length : 0;
@@ -50,35 +81,29 @@ export default function MasterPlayer({ masterUrl, multitrackUrl, arrangement, tr
         </button>
         <audio controls src={masterUrl} style={{ flex: 1 }} />
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <a
-          href={masterUrl}
-          download="master_mix.wav"
-          className="btn"
-          style={{ textDecoration: 'none' }}
-        >
-          💾 下载混音 (master_mix.wav)
-        </a>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button className="btn" onClick={handleSaveMaster}>
+          💾 保存混音 (master_mix.wav)
+        </button>
         {multitrackUrl && (
-          <a
-            href={multitrackUrl}
-            download="multitrack.wav"
-            className="btn"
-            style={{ textDecoration: 'none' }}
-          >
-            🎛️ 下载多轨文件 (multitrack.wav)
-          </a>
+          <button className="btn" onClick={handleSaveMultitrack}>
+            🎛️ 保存多轨文件 (multitrack.wav)
+          </button>
         )}
-        <button className="btn" onClick={downloadAllTracks}>
-          📦 下载全部分轨 ({trackCount} 个文件)
+        <button className="btn" onClick={handleSaveAll}>
+          📦 保存全部分轨 ({trackCount} 个文件)
         </button>
       </div>
+      {saveMsg && (
+        <div style={{ fontSize: 12, color: 'var(--success, #3fb950)', marginTop: 8, padding: '4px 8px', background: 'rgba(63,185,80,0.1)', borderRadius: 4 }}>
+          {saveMsg}
+        </div>
+      )}
       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
         • <b>混音文件</b>：所有音轨叠加为一个立体声 WAV<br/>
         • <b>多轨文件</b>：每条音轨占一个独立声道（可导入 DAW 分轨编辑）<br/>
-        • <b>分轨文件</b>：每条音轨单独下载为独立 WAV
+        • <b>分轨文件</b>：每条音轨单独保存为独立 WAV，点击后弹出文件夹选择框
       </p>
     </div>
   );
 }
-

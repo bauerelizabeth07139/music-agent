@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import ConfigPanel from './components/ConfigPanel';
 import ArrangePanel from './components/ArrangePanel';
 import VoicePanel from './components/VoicePanel';
@@ -318,9 +318,10 @@ function App() {
                   selectedTrack={selectedTrack}
                   onSelect={setSelectedTrack}
                   onVolumeChange={handleVolumeChange}
+                  jobId={jobId}
                 />
               )}
-              {masterUrl && <MasterPlayer masterUrl={masterUrl} multitrackUrl={multitrackUrl} arrangement={arrangement} tracks={renderedTracks} />}
+              {masterUrl && <MasterPlayer masterUrl={masterUrl} multitrackUrl={multitrackUrl} arrangement={arrangement} tracks={renderedTracks} jobId={jobId} />}
             </>
           ) : (
             <VoicePanel

@@ -80,8 +80,45 @@ def main():
     else:
         print("[Launcher] Server may not be ready, opening window anyway...")
 
-    # Open native window
+    # Open native window with JS API for file dialogs
     import webview
+
+    class NativeAPI:
+        """Expose native OS dialogs to the frontend JavaScript."""
+        def __init__(self):
+            self._window = None
+
+        def set_window(self, w):
+            self._window = w
+
+        def browse_folder(self):
+            """Open native folder picker dialog."""
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            folder = filedialog.askdirectory(title="选择保存位置")
+            root.destroy()
+            return folder or ""
+
+        def save_file_dialog(self, filename="audio.wav"):
+            """Open native save-file dialog, return chosen path."""
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            path = filedialog.asksaveasfilename(
+                title="保存文件",
+                initialfile=filename,
+                defaultextension=".wav",
+                filetypes=[("WAV Audio", "*.wav"), ("All Files", "*.*")],
+            )
+            root.destroy()
+            return path or ""
+
+    api = NativeAPI()
     window = webview.create_window(
         "Music Agent - AI 编曲工作站",
         f"http://127.0.0.1:{port}",
@@ -90,7 +127,9 @@ def main():
         min_size=(1000, 700),
         resizable=True,
         text_select=True,
+        js_api=api,
     )
+    api.set_window(window)
     webview.start(debug=False)
 
 if __name__ == "__main__":

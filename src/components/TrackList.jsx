@@ -1,4 +1,5 @@
-﻿import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import { saveAudioWithDialog } from '../saveAudio';
 
 const INSTRUMENT_EMOJI = {
   piano: '🎹', guitar: '🎸', bass: '🎸', drums: '🥁',
@@ -16,9 +17,10 @@ function getCSSVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function TrackItem({ track, selected, onSelect, onVolumeChange }) {
+function TrackItem({ track, selected, onSelect, onVolumeChange, jobId }) {
   const canvasRef = useRef(null);
   const [playing, setPlaying] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
   const audioRef = useRef(null);
   const isVocal = track.role === 'vocal';
 
@@ -64,6 +66,22 @@ function TrackItem({ track, selected, onSelect, onVolumeChange }) {
     }
   };
 
+  const handleSave = async (e) => {
+    e.stopPropagation();
+    if (!track.audio_url || !jobId) return;
+    const filename = track.audio_url.split('/').pop();
+    const displayName = `${track.id}_${track.name}.wav`;
+    setSaveMsg('保存中...');
+    const result = await saveAudioWithDialog(jobId, filename, displayName);
+    if (result.cancelled) { setSaveMsg(''); return; }
+    if (result.success) {
+      setSaveMsg(result.path === 'browser-download' ? '已下载' : `已保存`);
+    } else {
+      setSaveMsg(`失败: ${result.error}`);
+    }
+    setTimeout(() => setSaveMsg(''), 3000);
+  };
+
   const emoji = isVocal ? '🎤' : (INSTRUMENT_EMOJI[track.instrument] || '🎵');
 
   return (
@@ -102,16 +120,17 @@ function TrackItem({ track, selected, onSelect, onVolumeChange }) {
             onClick={e => e.stopPropagation()}
           />
           {track.audio_url && (
-            <a
-              href={track.audio_url}
-              download={`${track.id}_${track.name}.wav`}
+            <button
               className="btn btn-small"
-              style={{ textDecoration: 'none', fontSize: 11, padding: '2px 8px', marginLeft: 4 }}
-              onClick={e => e.stopPropagation()}
-              title={`下载 ${track.name}`}
+              style={{ fontSize: 11, padding: '2px 8px', marginLeft: 4 }}
+              onClick={handleSave}
+              title={`保存 ${track.name}`}
             >
               💾
-            </a>
+            </button>
+          )}
+          {saveMsg && (
+            <span style={{ fontSize: 10, color: 'var(--success, #3fb950)', marginLeft: 4 }}>{saveMsg}</span>
           )}
         </div>
       </div>
@@ -122,7 +141,7 @@ function TrackItem({ track, selected, onSelect, onVolumeChange }) {
   );
 }
 
-export default function TrackList({ tracks, selectedTrack, onSelect, onVolumeChange }) {
+export default function TrackList({ tracks, selectedTrack, onSelect, onVolumeChange, jobId }) {
   return (
     <div className="track-list">
       {tracks.map(track => (
@@ -132,6 +151,7 @@ export default function TrackList({ tracks, selectedTrack, onSelect, onVolumeCha
           selected={selectedTrack === track.id}
           onSelect={onSelect}
           onVolumeChange={onVolumeChange}
+          jobId={jobId}
         />
       ))}
     </div>

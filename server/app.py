@@ -643,6 +643,88 @@ async def health():
     return {"status": "ok", "time": time.time()}
 
 
+
+# ── Save audio with native dialog ──
+class SaveAudioRequest(BaseModel):
+    job_id: str
+    filename: str
+    save_dir: Optional[str] = None
+
+@app.post("/api/browse-folder")
+async def browse_folder():
+    """Open native folder picker dialog and return selected path."""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    def _pick():
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        folder = filedialog.askdirectory(title="选择保存位置", parent=root)
+        root.destroy()
+        return folder
+
+    loop = asyncio.get_event_loop()
+    folder = await loop.run_in_executor(None, _pick)
+    if not folder:
+        raise HTTPException(400, "No folder selected")
+    return {"path": folder}
+
+
+class SaveFileRequest(BaseModel):
+    job_id: str
+    filename: str
+    save_dir: str
+
+@app.post("/api/save-audio")
+async def save_audio(req: SaveFileRequest):
+    """Copy an audio file to user-chosen directory with native dialog."""
+    src = AUDIO_DIR / req.job_id / req.filename
+    if not src.exists():
+        raise HTTPException(404, f"Audio file not found: {req.filename}")
+
+    os.makedirs(req.save_dir, exist_ok=True)
+    dest = os.path.join(req.save_dir, req.filename)
+
+    # Avoid overwrite: add suffix if exists
+    if os.path.exists(dest):
+        base, ext = os.path.splitext(req.filename)
+        i = 1
+        while os.path.exists(dest):
+            dest = os.path.join(req.save_dir, f"{base}_{i}{ext}")
+            i += 1
+
+    import shutil
+    shutil.copy2(str(src), dest)
+    logger.info(f"[Save] Copied {src} -> {dest}")
+    return {"success": True, "path": dest, "filename": os.path.basename(dest)}
+
+
+@app.post("/api/save-all-tracks")
+async def save_all_tracks(req: SaveFileRequest):
+    """Copy all track audio files to user-chosen directory."""
+    jd = AUDIO_DIR / req.job_id
+    if not jd.exists():
+        raise HTTPException(404, "Job not found")
+
+    os.makedirs(req.save_dir, exist_ok=True)
+    saved = []
+    for f in sorted(jd.iterdir()):
+        if f.suffix == '.wav' and f.name not in ('vocal_raw.wav',):
+            dest = os.path.join(req.save_dir, f.name)
+            if os.path.exists(dest):
+                base, ext = os.path.splitext(f.name)
+                i = 1
+                while os.path.exists(dest):
+                    dest = os.path.join(req.save_dir, f"{base}_{i}{ext}")
+                    i += 1
+            import shutil
+            shutil.copy2(str(f), dest)
+            saved.append(os.path.basename(dest))
+
+    logger.info(f"[Save] Saved {len(saved)} files to {req.save_dir}")
+    return {"success": True, "count": len(saved), "files": saved, "path": req.save_dir}
+
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
 
