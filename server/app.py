@@ -556,7 +556,6 @@ async def health():
 @app.get("/api/presets")
 async def get_presets_compat():
     """Alias: return config presets for frontend."""
-    cfg = RuntimeConfig()
     return {"presets": PRESETS}
 
 
