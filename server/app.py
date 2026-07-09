@@ -643,6 +643,6 @@ async def health():
     return {"status": "ok", "time": time.time()}
 
 
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
 
