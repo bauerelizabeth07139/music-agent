@@ -93,7 +93,7 @@ class VocalRequest(BaseModel):
 
 class PlanRequest(BaseModel):
     job_id: str
-    lyrics: str
+    lyrics: Optional[str] = None
     style: Optional[str] = None
     tracks: list = []
     bpm: Optional[int] = None
@@ -102,7 +102,7 @@ class PlanRequest(BaseModel):
 
 class NotesRequest(BaseModel):
     job_id: str
-    lyrics: str
+    lyrics: Optional[str] = None
     style: Optional[str] = None
 
 class SynthRequest(BaseModel):
@@ -411,6 +411,19 @@ async def create_plan(req: PlanRequest):
     jd = AUDIO_DIR / req.job_id
     os.makedirs(jd, exist_ok=True)
 
+    # Auto-load lyrics from job dir if not provided
+    lyrics = req.lyrics
+    if not lyrics:
+        lp = jd / "lyrics.json"
+        if lp.exists():
+            ld = _rj(lp)
+            lyrics = ld.get("full_lyrics", "")
+            if not lyrics:
+                sections = ld.get("sections", [])
+                lyrics = "\n".join(s.get("lyrics","") for s in sections)
+    if not lyrics:
+        raise HTTPException(400, "No lyrics found. Generate lyrics first.")
+
     # Load vocal info if available
     vocal_info = {}
     vip = jd / "vocal_info.json"
@@ -418,13 +431,13 @@ async def create_plan(req: PlanRequest):
         vocal_info = _rj(vip)
 
     try:
-        local_refs = _offline_refs(req.lyrics[:200], req.style or "")
+        local_refs = _offline_refs(lyrics[:200], req.style or "")
         try:
-            refs = await _refs(req.lyrics[:200], req.style or "")
+            refs = await _refs(lyrics[:200], req.style or "")
         except Exception:
             refs = local_refs
         plan = await generate_track_plan(
-            req.lyrics, req.tracks, req.style or "", refs,
+            lyrics, req.tracks, req.style or "", refs,
             req.bpm, req.time_signature, req.key,
             vocal_duration=vocal_info.get("duration_sec"),
         )
@@ -438,11 +451,22 @@ async def create_plan(req: PlanRequest):
 async def create_notes(req: NotesRequest):
     """Step 4: Generate note sequences for all instrument tracks."""
     jd = AUDIO_DIR / req.job_id
+
+    # Auto-load lyrics from job dir if not provided
+    lyrics = req.lyrics
+    if not lyrics:
+        lp = jd / "lyrics.json"
+        if lp.exists():
+            ld = _rj(lp)
+            lyrics = ld.get("full_lyrics", "")
+            if not lyrics:
+                sections = ld.get("sections", [])
+                lyrics = "\n".join(s.get("lyrics","") for s in sections)
     if not (jd / "plan.json").exists():
         raise HTTPException(404, "Plan not found.")
     plan = _rj(jd / "plan.json")
     try:
-        full = await generate_track_notes(req.lyrics, plan, req.style or "")
+        full = await generate_track_notes(lyrics, plan, req.style or "")
     except Exception as e:
         raise HTTPException(502, f"Notes generation failed: {e}")
     _wj(jd / "arrangement.json", full)
@@ -575,6 +599,25 @@ async def compat_presets():
 async def health():
     return {"status": "ok", "time": time.time()}
 
+
+# === Compatibility aliases for frontend ===
+@app.get("/api/presets")
+async def get_presets_compat():
+    """Alias: return config presets for frontend."""
+    return {"presets": PRESETS}
+
+
+@app.post("/api/arrange")
+async def create_arrange_compat(req: PlanRequest):
+    """Alias for /api/plan - frontend calls /api/arrange."""
+    return await create_plan(req)
+
+
+@app.post("/api/render")
+async def render_tracks_compat(body: dict):
+    """Alias for /api/render/{job_id} - frontend sends job_id in body."""
+    job_id = body.get("job_id", "")
+    return await render_tracks(job_id)
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 

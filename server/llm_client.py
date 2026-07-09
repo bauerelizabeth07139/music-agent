@@ -417,7 +417,16 @@ async def generate_track_plan(lyrics, user_tracks, style="", references=None, bp
     if vocal_duration:
         vocal_info = f"\n人声轨道已生成，时长{vocal_duration:.1f}秒。total_beats必须精确匹配人声时长，计算公式：total_beats = round(BPM * {vocal_duration:.1f} / 60)。所有乐器轨道必须覆盖到这个total_beats，人声之外的时间由intro/间奏/outro的纯伴奏填充。"
     
-    text = await _call_llm(PLAN_SYSTEM, f"歌词：\n{lyrics}\n{style_info}{td}{vocal_info}\n输出编曲JSON。")
+    ref_info = ""
+    if references and references.get("results"):
+        ref_texts = []
+        for r in references["results"][:5]:
+            t = r.get("text", "")
+            if t:
+                ref_texts.append(f"- {t}")
+        if ref_texts:
+            ref_info = "\n?????????????????????\n" + "\n".join(ref_texts)
+    text = await _call_llm(PLAN_SYSTEM, f"歌词：\n{lyrics}\n{style_info}{td}{vocal_info}{ref_info}\n输出编曲JSON。")
     result = _extract_json(text)
     if "tracks" in result:
         result["tracks"] = [_normalize_track_metadata(t) for t in result["tracks"]]
