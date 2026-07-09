@@ -551,6 +551,26 @@ async def list_skills():
 async def health():
     return {"status": "ok", "time": time.time()}
 
+
+# === Compatibility aliases for frontend ===
+@app.get("/api/presets")
+async def get_presets_compat():
+    """Alias: return config presets for frontend."""
+    cfg = RuntimeConfig()
+    return {"presets": PRESETS}
+
+
+@app.post("/api/arrange")
+async def create_arrange_compat(req: PlanRequest):
+    """Alias for /api/plan - frontend calls /api/arrange."""
+    return await create_plan(req)
+
+
+@app.post("/api/render")
+async def render_tracks_compat(body: dict):
+    """Alias for /api/render/{job_id} - frontend sends job_id in body."""
+    job_id = body.get("job_id", "")
+    return await render_tracks(job_id)
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
