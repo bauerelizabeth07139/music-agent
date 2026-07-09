@@ -162,6 +162,18 @@ MIMO_TTS_MODEL=mimo-v2.5-tts
 
 本项目为基于小米 MiMo 的创意应用演示，重点展示 MiMo 在音乐创作 Agent 场景中的集成能力。
 
+### 浏览器主流程
+
+1. 生成歌词后选择人声并生成 TTS
+2. 确认编曲方案（LLM 会结合联网参考信息）
+3. 生成音符并确认
+4. 渲染多轨音频、生成主混音
+
+### Skill 调用说明
+
+- 联网能力来自 `skills/music-search`（`web.search`），默认先给 LLM 离线参考，再按需联网检索未知曲风/歌曲关键词
+- 乐器渲染来自 `skills/instruments`（`audio.render`），用于把音符方案转换为离线合成音频
+
 ---
 
 ## License

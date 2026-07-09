@@ -40,6 +40,11 @@ from llm_client import (
     TTS_STYLE_PROMPTS, VOICE_CATALOG, AVAILABLE_INSTRUMENTS, STYLE_KNOWLEDGE
 )
 from skill_loader import get_skill_by_type, list_skill_summaries
+import importlib.util
+spec = importlib.util.spec_from_file_location("music_search_skill", str((Path(__file__).resolve().parent.parent / "skills" / "music-search" / "skill.py")))
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+_offline_refs = mod._offline
 
 BASE_DIR = Path(__file__).resolve().parent
 AUDIO_DIR = BASE_DIR / "audio_out"
@@ -413,7 +418,11 @@ async def create_plan(req: PlanRequest):
         vocal_info = _rj(vip)
 
     try:
-        refs = await _refs(req.lyrics[:200], req.style or "")
+        local_refs = _offline_refs(req.lyrics[:200], req.style or "")
+        try:
+            refs = await _refs(req.lyrics[:200], req.style or "")
+        except Exception:
+            refs = local_refs
         plan = await generate_track_plan(
             req.lyrics, req.tracks, req.style or "", refs,
             req.bpm, req.time_signature, req.key,
@@ -546,6 +555,21 @@ async def search_music(req: SearchRequest):
 @app.get("/api/skills")
 async def list_skills():
     return {"skills": list_skill_summaries(), "instruments": _get_inst_names()}
+
+@app.post("/api/arrange")
+async def compat_arrange(req: PlanRequest):
+    return await create_plan(req)
+
+@app.post("/api/render")
+async def compat_render(body: dict):
+    job_id = body.get("job_id")
+    if not job_id:
+        raise HTTPException(400, "job_id is required")
+    return await render_tracks(job_id)
+
+@app.get("/api/presets")
+async def compat_presets():
+    return {"presets": PRESETS}
 
 @app.get("/api/health")
 async def health():
