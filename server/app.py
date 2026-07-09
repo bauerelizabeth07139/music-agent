@@ -1,4 +1,4 @@
-﻿"""Music Agent - FastAPI backend server.
+"""Music Agent - FastAPI backend server.
 
 Flow (v3):
 1. /api/lyrics        — Generate lyrics, return voice options
@@ -209,15 +209,33 @@ async def _generate_vocal_track(lyrics: str, voice: str, job_dir: Path) -> dict:
         if not all_audio:
             raise ValueError("No audio generated")
 
-        # Concatenate all segments (raw bytes = WAV)
-        combined = b"".join(all_audio)
-        
-        # Read the concatenated audio
-        import tempfile, io
-        tmp = io.BytesIO(combined)
-        data, sr = sf.read(tmp, dtype='float64')
-        if data.ndim == 2:
-            data = data.mean(axis=1)
+        # Concatenate segments properly - each is a separate WAV file
+        import io
+        all_data = []
+        sr = None
+        for i, ab in enumerate(all_audio):
+            try:
+                seg_data, seg_sr = sf.read(io.BytesIO(ab), dtype='float64')
+                if seg_data.ndim == 2:
+                    seg_data = seg_data.mean(axis=1)
+                if sr is None:
+                    sr = seg_sr
+                elif seg_sr != sr:
+                    # Resample if different sample rates
+                    new_len = int(len(seg_data) * sr / seg_sr)
+                    x_old = __import__('numpy').linspace(0, 1, len(seg_data))
+                    x_new = __import__('numpy').linspace(0, 1, new_len)
+                    seg_data = __import__('numpy').interp(x_new, x_old, seg_data)
+                all_data.append(seg_data)
+                logger.info(f"[Vocal] Segment {i+1}: {len(seg_data)} samples @ {seg_sr}Hz")
+            except Exception as e:
+                logger.error(f"[Vocal] Segment {i+1} decode failed: {e}")
+                continue
+
+        if not all_data:
+            raise ValueError("No valid audio segments")
+
+        data = np.concatenate(all_data)
         
         # Add intro silence (8s) and outro silence (6s)
         intro_silence = int(8.0 * sr)
@@ -334,7 +352,6 @@ async def _render_all(arrangement: dict, job_dir: Path) -> Dict[str, str]:
     vocal_path = job_dir / "vocal_raw.wav"
     for t in vocal_tracks:
         if vocal_path.exists():
-            # Rename to proper track file
             tid = t["id"]
             name = t.get("name", tid).replace(" ", "_").replace("/", "_")
             dest = job_dir / f"{tid}_{name}.wav"
@@ -349,12 +366,26 @@ async def _render_all(arrangement: dict, job_dir: Path) -> Dict[str, str]:
         try:
             loop = asyncio.get_event_loop()
             inst_result = await loop.run_in_executor(None, _render_instruments, inst_arr, str(job_dir))
-            track_paths.update(inst_result)
-            logger.info(f"[Render] Instruments: {list(inst_result.keys())}")
+            # Filter out None values (skill returns None for vocal tracks it skips)
+            for k, v in inst_result.items():
+                if v is not None:
+                    track_paths[k] = v
+            logger.info(f"[Render] Instruments rendered: {list(inst_result.keys())} -> valid: {[k for k,v in inst_result.items() if v]}")
         except Exception as e:
             logger.error(f"[Render] Instruments failed: {e}")
             logger.error(traceback.format_exc())
 
+    # Fallback: scan job_dir for any wav files matching track IDs not yet in track_paths
+    for t in tracks:
+        tid = t["id"]
+        if tid not in track_paths:
+            for f in job_dir.iterdir():
+                if f.suffix == ".wav" and f.name.startswith(tid + "_"):
+                    track_paths[tid] = str(f)
+                    logger.info(f"[Render] Fallback found {tid} -> {f.name}")
+                    break
+
+    logger.info(f"[Render] Total track_paths ({len(track_paths)}): {list(track_paths.keys())}")
     return track_paths
 
 
@@ -486,6 +517,17 @@ async def render_tracks(job_id: str):
 
     _master_mix(tp, arr, jd)
 
+
+    # Fallback: scan job_dir for wav files matching track IDs
+    for t in arr.get("tracks", []):
+        tid = t["id"]
+        if tid not in tp:
+            for f in jd.iterdir():
+                if f.suffix == ".wav" and f.name.startswith(tid + "_"):
+                    tp[tid] = str(f)
+                    logger.info(f"[Render API] Fallback found {tid} -> {f.name}")
+                    break
+
     ti = []
     for t in arr.get("tracks", []):
         tid = t["id"]
@@ -504,6 +546,7 @@ async def render_tracks(job_id: str):
                 "audio_url": f"/api/audio/{job_id}/{os.path.basename(fp)}"
             })
 
+    logger.info(f"[Render API] Returning {len(ti)} tracks for job {job_id}")
     master_fp = jd / "master_mix.wav"
     multi_fp = jd / "multitrack.wav"
     return {
@@ -600,26 +643,6 @@ async def health():
     return {"status": "ok", "time": time.time()}
 
 
-# === Compatibility aliases for frontend ===
-@app.get("/api/presets")
-async def get_presets_compat():
-    """Alias: return config presets for frontend."""
-    return {"presets": PRESETS}
-
-
-@app.post("/api/arrange")
-async def create_arrange_compat(req: PlanRequest):
-    """Alias for /api/plan - frontend calls /api/arrange."""
-    return await create_plan(req)
-
-
-@app.post("/api/render")
-async def render_tracks_compat(body: dict):
-    """Alias for /api/render/{job_id} - frontend sends job_id in body."""
-    job_id = body.get("job_id", "")
-    return await render_tracks(job_id)
-if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
-
 
 

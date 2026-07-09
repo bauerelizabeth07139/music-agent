@@ -1,4 +1,4 @@
-﻿"""Instrument synthesis skill — v3.2
+"""Instrument synthesis skill — v3.2
 
 Key changes from v3.1:
 1. Envelope: 0.5s sustain plateau before exponential decay starts
@@ -85,6 +85,7 @@ def _bowed_harmonics(freq: float, duration: float, sr: int,
                 Cello uses high odd_weight (hollow/warm).
                 Violin uses low odd_weight (bright/full).
     """
+    duration = max(duration, 0.05)  # Ensure minimum duration
     n = int(duration * sr)
     t = np.arange(n, dtype=np.float64) / sr
 
@@ -394,15 +395,20 @@ def render_track(track: Dict[str, Any], bpm: float, sr: int = SAMPLE_RATE) -> np
         end = note["start"] + note["duration"]
         if end > beats_total: beats_total = end
     beats_total += 1.0
-    total_samp = int(beats_total * 60.0 / bpm * sr)
+    total_samp = max(int(beats_total * 60.0 / bpm * sr), sr)
     mix = np.zeros(total_samp, dtype=np.float64)
 
     for note in notes:
         freq = note_to_freq(note["pitch"])
-        dur_sec = note["duration"] * 60.0 / bpm
+        dur_sec = max(note["duration"] * 60.0 / bpm, 0.05)
         start_sec = note["start"] * 60.0 / bpm
         vel = note.get("velocity", 80)
-        sig = synth_fn(freq, dur_sec, vel, sr)
+        try:
+            sig = synth_fn(freq, dur_sec, vel, sr)
+        except Exception:
+            continue
+        if len(sig) == 0:
+            continue
         s0 = int(start_sec * sr)
         s1 = s0 + len(sig)
         if s0 >= total_samp: continue
@@ -428,12 +434,20 @@ def render_arrangement(arrangement: Dict[str, Any], output_dir: str) -> Dict[str
         if role == "vocal":
             result_paths[tid] = None
             continue
-        notes = track.get("notes", [])
-        audio = render_track(track, bpm) if notes else np.zeros(SAMPLE_RATE * 2, dtype=np.float64)
-        fname = f"{tid}_{tname.replace(' ', '_').replace('/', '_')}.wav"
-        fpath = os.path.join(output_dir, fname)
-        sf.write(fpath, audio, SAMPLE_RATE)
-        result_paths[tid] = fpath
+        try:
+            notes = track.get("notes", [])
+            audio = render_track(track, bpm) if notes else np.zeros(SAMPLE_RATE * 2, dtype=np.float64)
+            fname = f"{tid}_{tname.replace(' ', '_').replace('/', '_')}.wav"
+            fpath = os.path.join(output_dir, fname)
+            sf.write(fpath, audio, SAMPLE_RATE)
+            result_paths[tid] = fpath
+        except Exception as e:
+            print(f"[Instruments] Error rendering {tid}: {e}")
+            # Still create a silence file so the track appears in the output
+            fname = f"{tid}_{tname.replace(' ', '_').replace('/', '_')}.wav"
+            fpath = os.path.join(output_dir, fname)
+            sf.write(fpath, np.zeros(SAMPLE_RATE * 2, dtype=np.float64), SAMPLE_RATE)
+            result_paths[tid] = fpath
     return result_paths
 
 

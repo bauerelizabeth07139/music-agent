@@ -325,6 +325,18 @@ export default function ArrangePanel({
     </div>
   );
 
+  // Done - show summary bar with reset button (TrackList/MasterPlayer render in App.jsx)
+  if (step === 'done') return arrangement ? (
+    <div style={{ padding: '12px 20px', background: 'var(--bg-input)', borderBottom: '1px solid #30363d', fontSize: 13, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <span style={{ color: 'var(--success)', fontWeight: 600 }}>🎵 渲染完成</span>
+      <span style={{ color: 'var(--info)', fontWeight: 600 }}>{arrangement.title || '未命名'}</span>
+      <span style={{ color: 'var(--text-muted)' }}>{arrangement.bpm || '?'} BPM</span>
+      <span style={{ color: 'var(--text-muted)' }}>{arrangement.key || '?'}</span>
+      <span style={{ color: 'var(--text-muted)' }}>{arrangement.tracks?.length || 0} 音轨</span>
+      <button className="btn btn-small" onClick={onReset} style={{ marginLeft: 'auto' }}>新建歌曲</button>
+    </div>
+  ) : null;
+
   // Fallback - show arrangement info bar
   return arrangement ? (
     <div style={{ padding: '12px 20px', background: 'var(--bg-input)', borderBottom: '1px solid #30363d', fontSize: 13, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
